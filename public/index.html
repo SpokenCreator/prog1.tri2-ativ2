@@ -1,23 +1,71 @@
 <!DOCTYPE html>
 <html lang='pt-BR'>
+
 <head>
-    <meta charset='utf-8'>
-    <meta name='viewport' content='width=device-width, initial-scale=1'>
-    <title>To Do</title>
-    <link rel='stylesheet' href='main.css'>
+  <meta charset='utf-8'>
+  <title>To-Do</title>
+  <script type="module">
+    // const elCreateForm = document.querySelector("#elCreateForm")
+
+    function createItemElement(index, title) {
+      const clone = elItemTemplate.content.cloneNode(true)
+      const elTitle = clone.querySelector('span')
+      const elBtDelete = clone.querySelector('button')
+      elTitle.innerText = title
+      // elBtDelete.dataset.index = index // abre uma brecha gigantesca pra HACKING
+      elBtDelete.addEventListener('click', async () => {
+        elBtDelete.setAttribute("disabled", true)
+        const request = await fetch(`/todo/${index}`, { method: "DELETE" })
+        if (request.ok)
+          return elBtDelete.closest('li').remove()
+        // caso de erro
+        elBtDelete.removeAttribute("disabled")
+        const resp = await request.text()
+        alert(`Erro: ${resp}`)
+      })
+      elItemTemplate.parentElement.append(clone)
+    }
+
+    void async function () {
+      const request = await fetch("/todo")
+      const items = await request.json()
+      items.forEach((item, index) => createItemElement(index, item.title))
+    }();
+
+    elCreateForm.addEventListener('submit', async (ev) => {
+      ev.preventDefault()
+      const title = elCreateForm.elTite.value
+      if (title.trim() === "") return
+      elCreateForm.fields.setAttribute('disabled', true)
+      const request = await fetch("/todo", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ title })
+      })
+      const { index } = await request.json()
+      elCreateForm.fields.removeAttribute('disabled')
+      createItemElement(index, title)
+      elCreateForm.elTite.value = ''
+    })
+
+  </script>
 </head>
+
 <body>
-    <form>
-        <fieldset>
-            <input name="elFile">
-            <button name="elCreate">Adicionar</button>
-        </fieldset>
-    </form>
-    <ul>
-        <template>
-            
-        </template>
-        <img src="https://www.ingresso.com/noticias/sylvester-stallone-se-junta-ao-preludio-de-rambo" alt="Rambo com um velho do lado">
-    </ul>
+  <form id="elCreateForm">
+    <fieldset name="fields">
+      <input name="elTite">
+      <button name="elCreate">adicionar</button>
+    </fieldset>
+  </form>
+  <ul>
+    <template id="elItemTemplate">
+      <li>
+        <button>del</button>
+        <span>...</span>
+      </li>
+    </template>
+  </ul>
 </body>
+
 </html>

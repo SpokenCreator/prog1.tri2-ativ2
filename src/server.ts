@@ -6,21 +6,16 @@ async function testRoute(req: Bun.BunRequest) {
     method: req.method,
     time: new Date().toLocaleString('pt-BR'),
     body: await req.body?.text(),
+    key: crypto.randomUUID()
   });
 }
 
 const server = Bun.serve({
   port: 3000,
   routes: {
+    '/': (req) => new Response(Bun.file('./public/index.html')),
     '/api-debugger': (req) => new Response(Bun.file('./public/api-debugger.html')),
-    '/test': {
-      GET: testRoute,
-      POST: testRoute,
-      PUT: testRoute,
-      DELETE: testRoute,
-      PATCH: testRoute,
-      OPTIONS: testRoute,
-    },
+    '/test':  testRoute,
     '/todo': {
       GET: async () => {
         const items = await todolist.getItems()
@@ -39,23 +34,32 @@ const server = Bun.serve({
         if (!data?.title) 
           return new Response('É preciso informar title', { status: 400 })
 
+        let index: number
+
         try {
-          await todolist.addItem(new Item(data.title))
+          index = await todolist.addItem(new Item(data.title))
         } catch (error) {
           return new Response('Erro ao adicionar item', { status: 500 })
         }
 
-        return new Response('Created', { status: 201 })
+        return Response.json({ index }, { status: 201 })
       }
     },
     '/todo/:index': {
-      DELETE: (req) => {
+      GET: (req) => {
+        return new Response("Not implemented yet!", { status: 501 })
+      },
+      DELETE: async (req) => {
         const strIndex = req.params.index
         const index = parseInt(strIndex)
         if (isNaN(index)) 
           return new Response('/todo/:index index precisa ser um número inteiro', { status: 400 })
-        todolist.removeItem(index)
-        return new Response(`Item do index ${index} removido.`)
+        try {
+          await todolist.removeItem(index)
+          return new Response(`Item do index ${index} removido.`)
+        } catch(e) {
+          return new Response(`Item do index ${index} não existe.`, { status: 400 })
+        }
       }
     }
   },
